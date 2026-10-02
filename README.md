@@ -51,7 +51,7 @@ PlayStation Pulse is a self-contained collection of static PS4 host pages. One e
 - Dedicated offline host pages for PS4 firmware 5.05 and 6.72.
 - PSFree/Lapse host flows for firmware 7.00–8.52 and 9.00–9.60.
 - A CSSFontFace UAF host flow for firmware 6.00–11.02.
-- A SlopKit WebKit research flow for firmware 11.00–13.00.
+- A SlopKit WebKit research flow for firmware 11.00–12.02 and 12.50–13.00.
 - Repository-bundled GoldHEN v2.4b18.12 and v2.4b18.5 assets where the host supports both builds.
 - AppCache-based offline operation with firmware-specific cache and manifest files.
 - Firmware-specific payload utilities on the host branches that provide them.
@@ -62,7 +62,7 @@ PlayStation Pulse is a self-contained collection of static PS4 host pages. One e
 | # | Firmware | Entry point | Exploit flow | GoldHEN | Utility payloads |
 |---|---|---|---|---|---|
 | 01 | **13.02–13.52** | `1352/index.html` | SlopKit WebKit (GoldHEN) | `v2.4b18.12` | Upstream payload only |
-| 02 | **11.00–13.00** | `1300/version-selector.html` | SlopKit WebKit (Lapse / Poops) | `stable` or `latest` | Upstream payload only |
+| 02 | **11.00–12.02 / 12.50–13.00** | `1300/latest/index.html` | SlopKit WebKit (Lapse / Poops) | `v2.4b18.12` | Upstream payload only |
 | 03 | **6.00–11.02** | `css/version-selector.html` | CSSFontFace UAF + Lapse/NetCtrl | `stable` or `latest` | No separate menu |
 | 04 | **9.00–9.60** | `900/version-selector.html` | PSFree + Lapse | Version selector | Included |
 | 05 | **7.00–8.52** | `700/version-selector.html` | PSFree + Lapse | Version selector | Included |
@@ -152,7 +152,7 @@ All host branches use relative assets and browser application caching. Cache fil
 | **7.00–8.52** | Select a build in `700/version-selector.html`, then use `cache.html` or `cache5.html` to install `PSPulse.cache` or `PSPulse5.cache`. |
 | **9.00–9.60** | Select a build in `900/version-selector.html`, then use `cache.html` or `cache5.html` to install `PSPulse.manifest` or `PSPulse5.manifest`. |
 | **CSSFontFace** | Select a build in `css/version-selector.html`; the chosen `stable` or `latest` page uses its own `cache.manifest` with per-file SHA-256 hashes. |
-| **1300** | Select a build in `1300/version-selector.html`; the chosen `stable` or `latest` router page installs its own `cache.manifest` automatically, cache updates require a tap to reload. |
+| **1300** | Open `1300/latest/index.html`; it installs its own `cache.manifest` automatically. The former selector URL redirects to this current build for old bookmarks. |
 | **1352** | Open `1352/index.html` (GoldHEN `v2.4b18.12` for 13.02–13.52); the page installs its own `cache.manifest` automatically, cache updates require a tap to reload. |
 
 After the first successful cache installation, close and reopen the PS4 browser when the page instructs you to do so. If a page still serves an older layout or script, clear the host's browser data and repeat the cache installation.
@@ -235,7 +235,7 @@ Wait until the host reports that the exploit/GoldHEN flow is ready. Confirm that
 - Do not use exploit pages for PSN access or other online services.
 - Do not assume that a payload is harmless simply because it is bundled locally; review what each utility does before loading it.
 - The CSSFontFace flow is especially sensitive to available browser memory; excluding optional utility payloads is an intentional stability trade-off.
-- The 11.00–13.00 branch is a research route with no real-console validation and no guarantee of stability; 12.03–12.49 have no working bug upstream.
+- The 11.00–12.02 / 12.50–13.00 branch is a research route with no guarantee of stability; 12.03–12.49 have no working bug upstream.
 - No host can guarantee identical results on every console, browser build, cache state, or network configuration.
 
 ## Credits and attribution
