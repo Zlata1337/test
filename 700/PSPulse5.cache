@@ -1,5 +1,5 @@
 CACHE MANIFEST
-# v8 - goldhen b18.12 (stable branch) cache-error-guard
+# v8 - goldhen b18.12 (stable branch) cache-error-guard dom-error-target-fix
 
 CACHE:
 index5.html

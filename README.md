@@ -62,7 +62,7 @@ PlayStation Pulse is a self-contained collection of static PS4 host pages. One e
 | # | Firmware | Entry point | Exploit flow | GoldHEN | Utility payloads |
 |---|---|---|---|---|---|
 | 01 | **13.02–13.52** | `1352/index.html` | SlopKit WebKit (GoldHEN) | `v2.4b18.12` | Upstream payload only |
-| 02 | **11.00–12.02 / 12.50–13.00** | `1300/latest/index.html` | SlopKit WebKit (Lapse / Poops) | `v2.4b18.12` | Upstream payload only |
+| 02 | **11.00–12.02 / 12.50–13.00** | `1300/index.html` | SlopKit WebKit (Lapse / Poops) | `v2.4b18.12` | Upstream payload only |
 | 03 | **6.00–11.02** | `css/version-selector.html` | CSSFontFace UAF + Lapse/NetCtrl | `stable` or `latest` | No separate menu |
 | 04 | **9.00–9.60** | `900/version-selector.html` | PSFree + Lapse | Version selector | Included |
 | 05 | **7.00–8.52** | `700/version-selector.html` | PSFree + Lapse | Version selector | Included |
@@ -152,7 +152,7 @@ All host branches use relative assets and browser application caching. Cache fil
 | **7.00–8.52** | Select a build in `700/version-selector.html`, then use `cache.html` or `cache5.html` to install `PSPulse.cache` or `PSPulse5.cache`. |
 | **9.00–9.60** | Select a build in `900/version-selector.html`, then use `cache.html` or `cache5.html` to install `PSPulse.manifest` or `PSPulse5.manifest`. |
 | **CSSFontFace** | Select a build in `css/version-selector.html`; the chosen `stable` or `latest` page uses its own `cache.manifest` with per-file SHA-256 hashes. |
-| **1300** | Open `1300/latest/index.html`; it installs its own `cache.manifest` automatically. The former selector URL redirects to this current build for old bookmarks. |
+| **1300** | Open `1300/index.html`; the current build is stored directly in `1300/` and installs its own `cache.manifest` automatically. |
 | **1352** | Open `1352/index.html` (GoldHEN `v2.4b18.12` for 13.02–13.52); the page installs its own `cache.manifest` automatically, cache updates require a tap to reload. |
 
 After the first successful cache installation, close and reopen the PS4 browser when the page instructs you to do so. If a page still serves an older layout or script, clear the host's browser data and repeat the cache installation.

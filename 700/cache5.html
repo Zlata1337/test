@@ -148,7 +148,7 @@ if (window.applicationCache.status == 2) { localStorage.is755BCached = true; }
             setTimeout(function () { window.location.reload("myBar"); }, 1500);
         };
         window.applicationCache.onnoupdate = function () { window.location.replace("index5.html"); };
-        window.applicationCache.onerror = function () { localStorage.is755BCached = false; document.getElementById("msgs2").innerHTML = "Offline cache failed. Clear browser data and reload while online."; };
+        window.applicationCache.onerror = function () { localStorage.is755BCached = false; document.getElementById("progress").innerHTML = "Offline cache failed. Clear browser data and reload while online."; };
 
         // Fallback progress animation
         var width = 0;
