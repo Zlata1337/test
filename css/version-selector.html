@@ -284,11 +284,9 @@
                 var code = eventCode(event);
 
                 if (isPrevious(key, code)) {
-                    event.preventDefault();
                     focusCard(currentFocus > 0 ?
                         currentFocus - 1 : cards.length - 1);
                 } else if (isNext(key, code)) {
-                    event.preventDefault();
                     focusCard(currentFocus < cards.length - 1 ?
                         currentFocus + 1 : 0);
                 } else if (isSelect(key, code)) {

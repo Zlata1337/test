@@ -11,6 +11,7 @@
     var netctrlRadio = document.getElementById('netctrl-exploit');
     var lapseRadio = document.getElementById('lapse-exploit');
     var form = document.getElementById('kernel-options');
+    var preflightKey = 'cssPreflightReady:' + window.location.pathname;
 
     function storageGet(name, fallback) {
         try {
@@ -180,9 +181,19 @@
 
         function startAfterSettledCache() {
             sessionRemove('cssCleanCacheReload');
-            if (checkbox.checked && !jailbreakRunning) {
-                jailbreakCountdown();
+            if (!checkbox.checked || jailbreakRunning) return;
+
+            if (sessionGet(preflightKey) !== 'yes') {
+                sessionSet(preflightKey, 'yes');
+                label.textContent =
+                    'Preparing a clean memory state — reloading once...';
+                setTimeout(function () {
+                    window.location.reload();
+                }, 750);
+                return;
             }
+
+            jailbreakCountdown();
         }
 
         function onReady() {
@@ -204,6 +215,7 @@
             }
 
             sessionSet('cssCleanCacheReload', 'yes');
+            sessionSet(preflightKey, 'yes');
             label.textContent = message;
             setTimeout(function () {
                 window.location.reload();
