@@ -1,5 +1,5 @@
 CACHE MANIFEST 
-#VERSION 3.0 - cache-gated startup and reliability fixes 20261003
+#VERSION 2.9 - goldhen b18.5 reliability-final support-link-20261003
 
 CACHE: 
 alert5.js
@@ -14,7 +14,6 @@ psfree5.js
 PSPulse5.manifest
 send.js
 version-selector.html
-../pspulse.png
 kpatch/900.elf
 kpatch/9001.elf
 kpatch/900OK.elf

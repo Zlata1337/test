@@ -206,8 +206,8 @@
 
     <script>
         function selectVersion(version) {
-            try { localStorage.setItem('selectedGoldHENVersion', version); }
-            catch (error) {}
+            // Store the selected version in localStorage
+            localStorage.setItem('selectedGoldHENVersion', version);
 
             // Redirect to appropriate cache page based on version
             if (version === 'v2.4b18.12') {
@@ -226,10 +226,8 @@
         for (var cardIndex = 0; cardIndex < cards.length; cardIndex++) {
             var card = cards[cardIndex];
             card.addEventListener('keydown', function (event) {
-                var cardKey = event.key || event.keyIdentifier || '';
-                var cardCode = event.which || event.keyCode || 0;
-                if (cardKey === 'Enter' || cardKey === ' ' || cardKey === 'Spacebar' ||
-                    cardKey === 'U+000D' || cardCode === 13 || cardCode === 32) {
+                var cardKey = event.key || event.keyCode;
+                if (cardKey === 'Enter' || cardKey === ' ' || cardKey === 13 || cardKey === 32) {
                     event.preventDefault();
                     this.click();
                 }

@@ -77,13 +77,7 @@
                 setProgress(100);
                 progressLabel.innerHTML = message;
                 cacheStatus.innerHTML = 'Opening the cached host...';
-                var handoffStored = false;
-                try {
-                    sessionStorage.setItem('pspulse900-cache-handoff', 'yes');
-                    handoffStored = sessionStorage.getItem('pspulse900-cache-handoff') === 'yes';
-                } catch (e) {}
-                var target = handoffStored ? 'index.html' : 'index.html?cacheReady=1';
-                setTimeout(function () { window.location.replace(target); }, 750);
+                setTimeout(function () { window.location.replace('index.html'); }, 1200);
             }
             if (!appCache) {
                 progressLabel.innerHTML = 'Offline cache is not supported by this browser.';

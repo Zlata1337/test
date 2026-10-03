@@ -182,29 +182,16 @@
         }
     </style>
     <script>
-        window.ps4FirmwareSupported = false;
-        window.ps4CacheReady = false;
-        (function () {
-            var handoff = false;
-            try {
-                handoff = sessionStorage.getItem("pspulse900-cache-handoff") === "yes";
-                sessionStorage.removeItem("pspulse900-cache-handoff");
-            } catch (error) {}
-            if (!handoff && /[?&]cacheReady=1(?:&|$)/.test(location.search))
-                handoff = true;
-            if (!handoff) {
-                window.location.replace("cache.html");
-                return;
-            }
-            window.ps4CacheReady = true;
-        }());
+        if (window.applicationCache.status == '0') {
+            window.location.replace("version-selector.html");
+        }
     </script>
     <script defer src="payloads.js"></script>
     <script defer src="loader.js"></script>
     <script type="module" src="alert.js"></script>
 </head>
 
-<body onload="if (window.ps4FirmwareSupported && window.ps4CacheReady) load_exploit();">
+<body onload="if (window.ps4FirmwareSupported) load_exploit();">
     <div class="app">
         <header class="bar">
             <span><b>PSPULSE</b> // ps4 hosts</span>
@@ -263,39 +250,26 @@
     </div>
 
     <script>
-        (function () {
-            var match = /PlayStation\s+4[\/ ](\d+)\.(\d+)/i.exec(navigator.userAgent || "");
-            var firmware = match ? match[1] + "." + match[2] : "unknown";
-            var supported = {
-                "9.00": true,
-                "9.03": true,
-                "9.04": true,
-                "9.50": true,
-                "9.51": true,
-                "9.60": true
-            };
-            window.ps4FirmwareSupported = supported[firmware] === true;
-            var firmwareElement = document.getElementById("PS4fw");
-            if (firmwareElement) firmwareElement.textContent = firmware;
-
-            if (!window.ps4FirmwareSupported) {
-                var status = document.getElementById("msgs2");
-                if (status)
-                    status.textContent = "Unsupported device or firmware. PS4 9.00-9.60 is required.";
-                return;
-            }
-
-            try {
-                if (localStorage.getItem("passcount") === null)
-                    localStorage.setItem("passcount", "0");
-                if (localStorage.getItem("failcount") === null)
-                    localStorage.setItem("failcount", "0");
-                var pass = document.getElementById("passCounter");
-                var fail = document.getElementById("failCounter");
-                if (pass) pass.textContent = localStorage.getItem("passcount") || "0";
-                if (fail) fail.textContent = localStorage.getItem("failcount") || "0";
-            } catch (error) {}
-        }());
+        // Firmware detection
+        UA = navigator.userAgent.substring(navigator.userAgent.indexOf("6.72 (") + 28, navigator.userAgent.indexOf(") Apple"));
+        // 9.xx
+        if (UA == "layStation 4/9.00") UA = "9.00";
+        if (UA == "layStation 4/9.03") UA = "9.03";
+        if (UA == "layStation 4/9.04") UA = "9.04";
+        if (UA == "layStation 4/9.50") UA = "9.50";
+        if (UA == "layStation 4/9.51") UA = "9.51";
+        if (UA == "layStation 4/9.60") UA = "9.60";
+        if (UA == "layStation 4/99.99") UA = "99.99";
+        var supportedFW = ["9.00", "9.03", "9.04", "9.50", "9.51", "9.60", "99.99"];
+        window.ps4FirmwareSupported = supportedFW.indexOf(UA) !== -1;
+        if (!window.ps4FirmwareSupported) alert("This Is For PS4 FW 9.xx Only!");
+        document.getElementById("PS4fw").innerHTML = "" + UA + "";
+        // Statistics initialization
+        if (localStorage.passcount == null || localStorage.passcount == undefined) localStorage.passcount = 0;
+        if (localStorage.failcount == null || localStorage.failcount == undefined) localStorage.failcount = 0;
+        // Update counters on page load
+        if (document.getElementById("passCounter")) document.getElementById("passCounter").innerHTML = localStorage.passcount;
+        if (document.getElementById("failCounter")) document.getElementById("failCounter").innerHTML = localStorage.failcount;
     </script>
 
 <!-- PSPulse support link: intentionally lightweight for the PS4 browser. -->
