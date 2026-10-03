@@ -206,8 +206,8 @@
 
     <script>
         function selectVersion(version) {
-            // Store the selected version in localStorage
-            localStorage.setItem('selectedGoldHENVersion', version);
+            // Storage may be unavailable in privacy mode; selection must still continue.
+            try { localStorage.setItem('selectedGoldHENVersion', version); } catch (error) {}
 
             // Redirect to appropriate cache page based on version
             if (version === 'v2.4b18.12') {
