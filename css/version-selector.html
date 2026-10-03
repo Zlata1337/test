@@ -219,66 +219,57 @@
             }
         }
 
-        // Gamepad navigation
-        let currentFocus = 0;
-        const cards = document.querySelectorAll('.version-card');
+        (function () {
+            var cards = document.querySelectorAll('.version-card');
+            var currentFocus = 0;
 
-        // Handle keyboard navigation
-        document.addEventListener('keydown', function (event) {
-            switch (event.key) {
-                case 'ArrowLeft':
-                case 'ArrowUp':
+            function activate(index) {
+                if (cards[index]) cards[index].click();
+            }
+
+            for (var index = 0; index < cards.length; index++) {
+                (function (card, cardIndex) {
+                    card.addEventListener('focus', function () {
+                        currentFocus = cardIndex;
+                    });
+                    card.addEventListener('keydown', function (event) {
+                        var key = event.key || event.keyCode;
+                        if (key === 'Enter' || key === ' ' || key === 13 || key === 32) {
+                            event.preventDefault();
+                            card.click();
+                        }
+                    });
+                    card.addEventListener('mousedown', function () {
+                        card.style.transform = 'translateY(-2px) scale(0.98)';
+                    });
+                    card.addEventListener('mouseup', function () {
+                        card.style.transform = 'translateY(0) scale(1)';
+                    });
+                    card.addEventListener('mouseleave', function () {
+                        card.style.transform = 'translateY(0) scale(1)';
+                    });
+                    card.addEventListener('blur', function () {
+                        card.style.transform = 'translateY(0) scale(1)';
+                    });
+                }(cards[index], index));
+            }
+
+            document.addEventListener('keydown', function (event) {
+                var key = event.key || event.keyCode;
+                if (key === 'ArrowLeft' || key === 'ArrowUp' || key === 37 || key === 38) {
                     event.preventDefault();
                     currentFocus = currentFocus > 0 ? currentFocus - 1 : cards.length - 1;
                     cards[currentFocus].focus();
-                    break;
-                case 'ArrowRight':
-                case 'ArrowDown':
+                } else if (key === 'ArrowRight' || key === 'ArrowDown' || key === 39 || key === 40) {
                     event.preventDefault();
                     currentFocus = currentFocus < cards.length - 1 ? currentFocus + 1 : 0;
                     cards[currentFocus].focus();
-                    break;
-                case 'Enter':
-                case ' ':
+                } else if (key === 'Enter' || key === ' ' || key === 13 || key === 32) {
                     event.preventDefault();
-                    cards[currentFocus].click();
-                    break;
-            }
-        });
-
-        // Track focus changes
-        cards.forEach((card, index) => {
-            card.addEventListener('focus', function () {
-                currentFocus = index;
-            });
-
-            // Handle Enter key on focused element
-            card.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    this.click();
+                    activate(currentFocus);
                 }
             });
-        });
-
-        // Add click animation effect
-        document.querySelectorAll('.version-card').forEach(card => {
-            card.addEventListener('mousedown', function () {
-                this.style.transform = 'translateY(-2px) scale(0.98)';
-            });
-
-            card.addEventListener('mouseup', function () {
-                this.style.transform = 'translateY(-5px) scale(1)';
-            });
-
-            card.addEventListener('mouseleave', function () {
-                this.style.transform = 'translateY(0px) scale(1)';
-            });
-
-            card.addEventListener('blur', function () {
-                this.style.transform = 'translateY(0px) scale(1)';
-            });
-        });
+        }());
     </script>
 
 <!-- PSPulse support link: intentionally lightweight for the PS4 browser. -->
