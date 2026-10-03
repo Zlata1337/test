@@ -171,25 +171,155 @@
     <script src="exploit.js"></script>
 </head>
 
-<body onload="if(localStorage.cached505=='yes')setTimeout(exploit, 50);">
+<body onload="start505Host();">
     <script>
-        (function () {
+        var host505Started = false;
+        var host505Watchdog = null;
+
+        function storage505Get(name, fallback) {
+            try {
+                var value = localStorage.getItem(name);
+                return value === null ? fallback : value;
+            } catch (error) {
+                return fallback;
+            }
+        }
+
+        function storage505Set(name, value) {
+            try { localStorage.setItem(name, String(value)); } catch (error) {}
+        }
+
+        function storage505Remove(name) {
+            try { localStorage.removeItem(name); } catch (error) {}
+        }
+
+        function session505Get(name) {
+            try { return sessionStorage.getItem(name); } catch (error) { return null; }
+        }
+
+        function session505Set(name, value) {
+            try { sessionStorage.setItem(name, String(value)); } catch (error) {}
+        }
+
+        function session505Remove(name) {
+            try { sessionStorage.removeItem(name); } catch (error) {}
+        }
+
+        function status505(message) {
+            var element = document.getElementById('msgs2');
+            if (element) element.textContent = message;
+        }
+
+        function isSupported505() {
+            var ua = navigator.userAgent || '';
+            return /PlayStation 4/i.test(ua) &&
+                /PlayStation\s+4[\/ ]5\.05(?:[^0-9]|$)/i.test(ua);
+        }
+
+        function run505Once() {
+            if (host505Started) return;
+            host505Started = true;
+            status505('Starting exploit...');
+            try {
+                exploit();
+            } catch (error) {
+                status505('Startup failed. Reload the browser before retrying.');
+                var menuMessage = document.getElementById('msgs');
+                if (menuMessage) {
+                    menuMessage.textContent = error && error.message ?
+                        error.message : String(error);
+                }
+            }
+        }
+
+        function start505Host() {
+            if (!isSupported505()) {
+                status505('Unsupported device or firmware. PS4 5.05 is required.');
+                return;
+            }
+
             var ac = window.applicationCache;
-            if (!ac) return;
-            ac.onprogress = function (a) {
-                if (a.total) document.getElementById("msgs2").innerHTML = "Installing Offline Cache: " + Math.round(100 * (a.loaded / a.total)) + "%";
-            };
-            ac.oncached = function () {
-                localStorage.cached505 = "yes";
-                setTimeout(function () { document.getElementById("msgs2").innerHTML = "Cache Installed Successfully ✔"; }, 1500);
-                setTimeout(function () { document.getElementById("msgs2").innerHTML = "Now Close And Re-Open Your Browser ..."; }, 3500);
-            };
-            ac.onnoupdate = function () { localStorage.cached505 = "yes"; };
-            ac.onerror = function () {
-                localStorage.removeItem("cached505");
-                document.getElementById("msgs2").innerHTML = "Offline cache failed. Clear browser data and reload while online.";
-            };
-        }());
+            var hasManifest = document.documentElement.hasAttribute('manifest');
+            if (!ac || !hasManifest) {
+                status505('Offline cache unavailable. Starting online mode...');
+                setTimeout(run505Once, 250);
+                return;
+            }
+
+            var finished = false;
+            function finish() {
+                if (finished) return false;
+                finished = true;
+                if (host505Watchdog !== null) {
+                    clearTimeout(host505Watchdog);
+                    host505Watchdog = null;
+                }
+                return true;
+            }
+
+            function ready(message) {
+                if (!finish()) return;
+                storage505Set('cached505', 'yes');
+                session505Remove('cacheReload505');
+                status505(message);
+                setTimeout(run505Once, 500);
+            }
+
+            function updateReady() {
+                if (!finish()) return;
+                storage505Set('cached505', 'yes');
+                try { ac.swapCache(); } catch (error) {}
+                if (session505Get('cacheReload505') !== 'yes') {
+                    session505Set('cacheReload505', 'yes');
+                    status505('Cache updated. Reloading once...');
+                    setTimeout(function () { window.location.reload(); }, 750);
+                } else {
+                    status505('Cache updated. Starting...');
+                    setTimeout(run505Once, 500);
+                }
+            }
+
+            function cacheError() {
+                if (!finish()) return;
+                storage505Remove('cached505');
+                status505('Offline cache failed. Check the connection and retry manually.');
+            }
+
+            ac.addEventListener('downloading', function () {
+                status505('Installing offline cache...');
+            }, false);
+            ac.addEventListener('progress', function (event) {
+                if (event && event.total > 0) {
+                    status505('Installing Offline Cache: ' +
+                        Math.round(100 * event.loaded / event.total) + '%');
+                }
+            }, false);
+            ac.addEventListener('cached', function () {
+                ready('Cache installed. Starting...');
+            }, false);
+            ac.addEventListener('noupdate', function () {
+                ready('Offline cache ready. Starting...');
+            }, false);
+            ac.addEventListener('updateready', updateReady, false);
+            ac.addEventListener('error', cacheError, false);
+            ac.addEventListener('obsolete', function () {
+                if (!finish()) return;
+                storage505Remove('cached505');
+                status505('Offline cache is obsolete. Clear browser data and reload.');
+            }, false);
+
+            if (ac.status === ac.UPDATEREADY) {
+                updateReady();
+            } else if (ac.status === ac.IDLE) {
+                ready('Offline cache ready. Starting...');
+            } else {
+                status505('Waiting for offline cache...');
+                host505Watchdog = setTimeout(function () {
+                    if (!finish()) return;
+                    status505('Cache check timed out. Retry manually.');
+                }, 60000);
+            }
+        }
     </script>
 
     <div class="app">
@@ -323,23 +453,69 @@
         }
 
         var payloadBusy = false;
+        var PLfile = null;
+        var LoadedMSG = '';
+        var runPAYLOAD1 = null;
+        var allowedPayloads = {
+            'goldhen.bin': true,
+            'goldhen5.bin': true,
+            'ftp.bin': true,
+            'ps4debug.bin': true,
+            'app2usb.bin': true,
+            'backup.bin': true,
+            'restore.bin': true,
+            'disable-updates.bin': true,
+            'enable-updates.bin': true,
+            'rif-renamer.bin': true,
+            'Kernel-Clock.bin': true,
+            'appcache-install.bin': true,
+            'history-blocker.bin': true,
+            'pup-decrypt.bin': true
+        };
+
+        function payloadError(message) {
+            payloadBusy = false;
+            msgs.textContent = message;
+        }
+
         function load_payload() {
             if (payloadBusy) return;
+            if (!allowedPayloads[PLfile]) {
+                payloadError('Unknown payload selected. Reload the host.');
+                return;
+            }
+
             payloadBusy = true;
-            req1 = null;
+            var requestedPayload = PLfile;
             var req1 = new XMLHttpRequest();
-            req1.open('GET', PLfile); req1.responseType = "arraybuffer"; req1.timeout = 15000;
-            req1.ontimeout = function () { payloadBusy = false; msgs.innerHTML = "Payload request timed out. Reload the host before retrying."; };
-            req1.onerror = function () { payloadBusy = false; msgs.innerHTML = "Payload request failed. Check the cached host files."; };
-            req1.send();
+            req1.open('GET', requestedPayload, true);
+            req1.responseType = 'arraybuffer';
+            req1.timeout = 15000;
+            req1.ontimeout = function () {
+                payloadError('Payload request timed out. Reload before retrying.');
+            };
+            req1.onerror = function () {
+                payloadError('Payload request failed. Check the cached host files.');
+            };
+            req1.onabort = function () {
+                payloadError('Payload request was cancelled. Reload before retrying.');
+            };
             req1.onreadystatechange = function () {
-                if (req1.readyState == 4) {
-                    if (req1.status != 200 || !req1.response || !req1.response.byteLength) {
-                        payloadBusy = false;
-                        msgs.innerHTML = "Payload file is unavailable. Do not continue.";
-                        return;
-                    }
-                    var padding1 = new Uint8Array(4 - (req1.response.byteLength % 4) % 4);
+                if (req1.readyState !== 4) return;
+                req1.onreadystatechange = null;
+                if (req1.status !== 200 || !req1.response ||
+                    req1.response.byteLength === 0) {
+                    payloadError('Payload file is unavailable. Do not continue.');
+                    return;
+                }
+                if (req1.response.byteLength > 0x200000) {
+                    payloadError('Payload is too large for the reserved memory area.');
+                    return;
+                }
+
+                try {
+                    var paddingSize = (4 - (req1.response.byteLength % 4)) % 4;
+                    var padding1 = new Uint8Array(paddingSize);
                     var tmp1 = new Uint8Array(req1.response.byteLength + padding1.byteLength);
                     tmp1.set(new Uint8Array(req1.response), 0);
                     tmp1.set(padding1, req1.response.byteLength);
@@ -354,11 +530,15 @@
                         PLfile = null;
                         for (var x = 0; x < 0x300000; x += 8) {
                             p.write8(code_addr1.add32(x), 0);
-                        } setTimeout(allset, 50);
+                        }
+                        setTimeout(allset, 50);
                     };
                     setTimeout(runPAYLOAD1, 100);
+                } catch (error) {
+                    payloadError('Payload execution failed. Reload before retrying.');
                 }
             };
+            req1.send(null);
         }
 
         function load_goldhen18() {
