@@ -223,52 +223,81 @@
             var cards = document.querySelectorAll('.version-card');
             var currentFocus = 0;
 
-            function activate(index) {
-                if (cards[index]) cards[index].click();
+            function eventKey(event) {
+                return event.key || event.keyIdentifier || '';
+            }
+
+            function eventCode(event) {
+                return event.which || event.keyCode || 0;
+            }
+
+            function isPrevious(key, code) {
+                return key === 'ArrowLeft' || key === 'ArrowUp' ||
+                    key === 'Left' || key === 'Up' ||
+                    key === 'UIKeyInputLeftArrow' ||
+                    key === 'UIKeyInputUpArrow' ||
+                    code === 37 || code === 38;
+            }
+
+            function isNext(key, code) {
+                return key === 'ArrowRight' || key === 'ArrowDown' ||
+                    key === 'Right' || key === 'Down' ||
+                    key === 'UIKeyInputRightArrow' ||
+                    key === 'UIKeyInputDownArrow' ||
+                    code === 39 || code === 40;
+            }
+
+            function isSelect(key, code) {
+                return key === 'Enter' || key === ' ' ||
+                    key === 'Spacebar' || key === 'U+000D' ||
+                    code === 13 || code === 32;
+            }
+
+            function focusCard(index) {
+                if (!cards.length) return;
+                currentFocus = index;
+                cards[currentFocus].focus();
             }
 
             for (var index = 0; index < cards.length; index++) {
                 (function (card, cardIndex) {
                     card.addEventListener('focus', function () {
                         currentFocus = cardIndex;
-                    });
-                    card.addEventListener('keydown', function (event) {
-                        var key = event.key || event.keyCode;
-                        if (key === 'Enter' || key === ' ' || key === 13 || key === 32) {
-                            event.preventDefault();
-                            card.click();
-                        }
-                    });
+                    }, false);
                     card.addEventListener('mousedown', function () {
                         card.style.transform = 'translateY(-2px) scale(0.98)';
-                    });
+                    }, false);
                     card.addEventListener('mouseup', function () {
                         card.style.transform = 'translateY(0) scale(1)';
-                    });
+                    }, false);
                     card.addEventListener('mouseleave', function () {
                         card.style.transform = 'translateY(0) scale(1)';
-                    });
+                    }, false);
                     card.addEventListener('blur', function () {
                         card.style.transform = 'translateY(0) scale(1)';
-                    });
+                    }, false);
                 }(cards[index], index));
             }
 
             document.addEventListener('keydown', function (event) {
-                var key = event.key || event.keyCode;
-                if (key === 'ArrowLeft' || key === 'ArrowUp' || key === 37 || key === 38) {
+                var key = eventKey(event);
+                var code = eventCode(event);
+
+                if (isPrevious(key, code)) {
                     event.preventDefault();
-                    currentFocus = currentFocus > 0 ? currentFocus - 1 : cards.length - 1;
-                    cards[currentFocus].focus();
-                } else if (key === 'ArrowRight' || key === 'ArrowDown' || key === 39 || key === 40) {
+                    focusCard(currentFocus > 0 ?
+                        currentFocus - 1 : cards.length - 1);
+                } else if (isNext(key, code)) {
                     event.preventDefault();
-                    currentFocus = currentFocus < cards.length - 1 ? currentFocus + 1 : 0;
-                    cards[currentFocus].focus();
-                } else if (key === 'Enter' || key === ' ' || key === 13 || key === 32) {
+                    focusCard(currentFocus < cards.length - 1 ?
+                        currentFocus + 1 : 0);
+                } else if (isSelect(key, code)) {
                     event.preventDefault();
-                    activate(currentFocus);
+                    if (cards[currentFocus]) cards[currentFocus].click();
                 }
-            });
+            }, false);
+
+            if (cards.length) focusCard(0);
         }());
     </script>
 
