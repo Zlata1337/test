@@ -27,6 +27,26 @@
         } catch (error) {}
     }
 
+    function sessionGet(name) {
+        try {
+            return sessionStorage.getItem(name);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function sessionSet(name, value) {
+        try {
+            sessionStorage.setItem(name, String(value));
+        } catch (error) {}
+    }
+
+    function sessionRemove(name) {
+        try {
+            sessionStorage.removeItem(name);
+        } catch (error) {}
+    }
+
     var storedChain = storageGet('exploitChain', 'lapse');
     window.exploitChain =
         storedChain === 'netctrl' ? 'netctrl' : 'lapse';
@@ -132,7 +152,7 @@
                 'downloading', onDownloading, false
             );
             cache.removeEventListener(
-                'cached', onReady, false
+                'cached', onCached, false
             );
             cache.removeEventListener(
                 'noupdate', onReady, false
@@ -158,28 +178,56 @@
                 'Installing offline cache...';
         }
 
-        function onReady() {
-            finish();
+        function startAfterSettledCache() {
+            sessionRemove('cssCleanCacheReload');
             if (checkbox.checked && !jailbreakRunning) {
                 jailbreakCountdown();
             }
         }
 
-        function onUpdate() {
+        function onReady() {
             finish();
-            try {
-                cache.swapCache();
-            } catch (error) {}
-            label.textContent =
-                'Cache updated — reloading once...';
+            startAfterSettledCache();
+        }
+
+        function reloadForCleanStart(message, swapCache) {
+            finish();
+            if (swapCache) {
+                try {
+                    cache.swapCache();
+                } catch (error) {}
+            }
+
+            if (sessionGet('cssCleanCacheReload') === 'yes') {
+                startAfterSettledCache();
+                return;
+            }
+
+            sessionSet('cssCleanCacheReload', 'yes');
+            label.textContent = message;
             setTimeout(function () {
                 window.location.reload();
             }, 750);
         }
 
+        function onCached() {
+            reloadForCleanStart(
+                'Cache installed — reloading for a clean start...',
+                false
+            );
+        }
+
+        function onUpdate() {
+            reloadForCleanStart(
+                'Cache updated — reloading for a clean start...',
+                true
+            );
+        }
+
         function onError() {
             finish();
             stopCountdown();
+            sessionRemove('cssCleanCacheReload');
             label.textContent =
                 'Cache failed — retry manually';
         }
@@ -187,7 +235,7 @@
         cache.addEventListener(
             'downloading', onDownloading, false
         );
-        cache.addEventListener('cached', onReady, false);
+        cache.addEventListener('cached', onCached, false);
         cache.addEventListener('noupdate', onReady, false);
         cache.addEventListener(
             'updateready', onUpdate, false
@@ -204,7 +252,7 @@
             watchdog = setTimeout(onError, 60000);
         } else {
             cacheWaitActive = false;
-            jailbreakCountdown();
+            startAfterSettledCache();
         }
     }
 
