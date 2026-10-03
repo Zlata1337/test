@@ -163,132 +163,210 @@
     var stateEl = document.getElementById("state");
     var detEl = document.getElementById("det");
     var cacheEl = document.getElementById("cache");
-    function setState(t, c) { stateEl.textContent = t; stateEl.className = c || ""; }
-    function setCache(t, ok) { cacheEl.textContent = t; cacheEl.className = ok ? "cacheok" : ""; }
+    var launched = false;
+    var cacheFinished = false;
+    var cacheWatchdog = null;
+
+    function setState(text, cssClass) {
+        stateEl.textContent = text;
+        stateEl.className = cssClass || "";
+    }
+    function setCache(text, ok) {
+        cacheEl.textContent = text;
+        cacheEl.className = ok ? "cacheok" : "";
+    }
     function queryValue(name) {
         var match = new RegExp("[?&]" + name + "=([^&]*)").exec(location.search);
-        return match ? decodeURIComponent(match[1]) : null;
+        if (!match) return null;
+        try { return decodeURIComponent(match[1]); } catch (error) { return null; }
+    }
+    function sessionGet(name) {
+        try { return sessionStorage.getItem(name); } catch (error) { return null; }
+    }
+    function sessionSet(name, value) {
+        try {
+            sessionStorage.setItem(name, String(value));
+            return sessionStorage.getItem(name) === String(value);
+        } catch (error) { return false; }
+    }
+    function sessionRemove(name) {
+        try { sessionStorage.removeItem(name); } catch (error) {}
     }
 
-    var key = null, fwnum = null;
-    var m = /PlayStation\s+4[\/ ](\d+)\.(\d+)/.exec(navigator.userAgent);
-    if (m) {
-        var minor = parseInt(m[2], 16);
-        var ms = minor.toString(16);
-        if (ms.length < 2) ms = "0" + ms;
-        key = m[1] + "." + ms;
-        fwnum = parseInt(m[1], 10) * 100 + parseInt(ms, 10);
+    var key = null;
+    var fwnum = null;
+    var match = /PlayStation\s+4[\/ ](\d+)\.(\d+)/.exec(navigator.userAgent);
+    if (match) {
+        var minor = parseInt(match[2], 16);
+        var minorString = minor.toString(16);
+        if (minorString.length < 2) minorString = "0" + minorString;
+        key = match[1] + "." + minorString;
+        fwnum = parseInt(match[1], 10) * 100 + parseInt(minorString, 10);
     }
 
-    var bug = null, why = "";
+    if (fwnum === 1101 || fwnum === 1102) {
+        window.location.replace("../css/version-selector.html");
+        return;
+    }
 
-  // 11.01/11.02 are routed to the local CSSFontFace branch; this chain has no patch for them.
-  if (fwnum !== null && fwnum <= 1102 && fwnum !== 1100) {
-    window.location.replace("../css/version-selector.html");
-    return;
-}
-
+    var LAPSE = { 1100: 1, 1150: 1, 1200: 1, 1202: 1 };
+    var POOPS = { 1250: 1, 1252: 1, 1300: 1 };
+    var bug = LAPSE[fwnum] ? "lapse" : (POOPS[fwnum] ? "poops" : null);
     var forced = queryValue("bug");
-    if (forced === "lapse" || forced === "poops") {
-        bug = forced; why = "forced via ?bug=" + forced;
-    } else if (!key) {
-        why = "user-agent is not a PlayStation 4";
-    } else if (fwnum <= 1202) {
-        bug = "lapse"; why = key + " <= 12.02";
-    } else if (fwnum >= 1250) {
-        bug = "poops"; why = key + " >= 12.50";
-    } else {
-        why = key + " -- no working bug (lapse ends at 12.02, poops needs 12.50)";
-    }
+    if (bug && (forced === "lapse" || forced === "poops")) bug = forced;
+
+    var why = !key ? "user-agent is not a PlayStation 4" :
+        bug ? key + " uses " + bug : key + " is not supported by this host";
     detEl.innerHTML = "firmware <b>" + (key || "unknown") + "</b>"
         + " &middot; bug <b>" + (bug || "none") + "</b> &middot; " + why;
 
-    if (!bug) { setState("UNSUPPORTED FIRMWARE", "bad"); return; }
+    if (!bug) {
+        setState("UNSUPPORTED FIRMWARE — execution stopped", "bad");
+        setCache("Supported: 11.00, 11.50, 12.00, 12.02, 12.50, 12.52 and 13.00.");
+        return;
+    }
 
     var target = (bug === "lapse" ? "run_lapse.html" : "run_poops.html")
         + location.search;
-    function go() { setState("loading " + bug + " chain...", "warn");
-                    location.replace(target); }
+    var preflightKey = "pspulse-1300-preflight:" + target;
+    var cacheReloadKey = "pspulse-1300-cache-reload";
 
-    function waitForTap(msg, action) {
-        setState(msg, "warn");
+    function waitForTap(message, action) {
+        setState(message, "warn");
+        var fired = false;
+        function cleanup() {
+            window.removeEventListener("click", click, false);
+            window.removeEventListener("keydown", keydown, false);
+        }
         function fire() {
-            window.removeEventListener("click", fire);
-            window.removeEventListener("keydown", fire);
+            if (fired) return;
+            fired = true;
+            cleanup();
             action();
         }
-        window.addEventListener("click", fire);
-        window.addEventListener("keydown", fire);
+        function click() { fire(); }
+        function keydown(event) {
+            var code = event.which || event.keyCode || 0;
+            var keyName = event.key || event.keyIdentifier || "";
+            if (code === 13 || code === 32 || keyName === "Enter" ||
+                keyName === " " || keyName === "Spacebar") {
+                event.preventDefault();
+                fire();
+            }
+        }
+        window.addEventListener("click", click, false);
+        window.addEventListener("keydown", keydown, false);
+    }
+
+    function go() {
+        if (launched) return;
+        launched = true;
+        if (sessionGet(preflightKey) !== "yes") {
+            if (!sessionSet(preflightKey, "yes")) {
+                setState("SESSION STORAGE UNAVAILABLE — press X to continue", "warn");
+                waitForTap("SESSION STORAGE UNAVAILABLE — press X to continue", function () {
+                    location.replace(target);
+                });
+                return;
+            }
+            setState("preparing a clean memory state...", "warn");
+            setTimeout(function () { location.reload(); }, 750);
+            return;
+        }
+        setState("loading " + bug + " chain...", "warn");
+        location.replace(target);
+    }
+
+    function finishCache() {
+        if (cacheFinished) return false;
+        cacheFinished = true;
+        if (cacheWatchdog !== null) {
+            clearTimeout(cacheWatchdog);
+            cacheWatchdog = null;
+        }
+        return true;
+    }
+
+    function reloadWithFreshCache(swap) {
+        if (!finishCache()) return;
+        if (swap) {
+            try { applicationCache.swapCache(); } catch (error) {}
+        }
+        sessionSet(preflightKey, "yes");
+        if (sessionGet(cacheReloadKey) === "yes") {
+            sessionRemove(cacheReloadKey);
+            go();
+            return;
+        }
+        sessionSet(cacheReloadKey, "yes");
+        setCache("cache ready — reloading once", true);
+        setTimeout(function () { location.reload(); }, 750);
     }
 
     var ac = window.applicationCache;
     if (!ac || !document.documentElement.hasAttribute("manifest")) {
+        setCache("application cache unavailable");
         go();
-    } else if (!navigator.onLine) {
-        setCache("offline -- from cache", true);
+        return;
+    }
+
+    ac.addEventListener("downloading", function () {
+        setCache("caching for offline use...");
+    }, false);
+    ac.addEventListener("progress", function (event) {
+        if (event && event.total > 0)
+            setCache("caching " + Math.round(event.loaded / event.total * 100) + "%");
+    }, false);
+    ac.addEventListener("cached", function () {
+        reloadWithFreshCache(false);
+    }, false);
+    ac.addEventListener("updateready", function () {
+        reloadWithFreshCache(true);
+    }, false);
+    ac.addEventListener("noupdate", function () {
+        if (!finishCache()) return;
+        sessionRemove(cacheReloadKey);
+        setCache("cached — offline ready", true);
         go();
-    } else if (ac.status === ac.IDLE) {
-        // Manifest revalidation is async and usually has NOT finished when
-        // this inline script runs. Launching now would race a background
-        // re-download of the whole host on update days (-> OOM mid-exploit).
-        // Wait briefly, then re-evaluate the real status.
-        setCache("cached -- verifying up to date...");
-        setTimeout(function () {
-            if (ac.status === ac.CHECKING || ac.status === ac.DOWNLOADING) {
-                setCache("update found -- downloading...");
-                waitForDownload();
-            } else if (ac.status === ac.UPDATEREADY) {
-                try { ac.swapCache(); } catch (e) {}
-                setCache("update downloaded", true);
-                waitForTap("UPDATE READY -- press X or tap to reload & run",
-                           function () { location.reload(); });
-            } else {
-                setCache("cached", true);
-                go();
-            }
-        }, 3000);
+    }, false);
+    ac.addEventListener("error", function () {
+        if (!finishCache()) return;
+        sessionRemove(cacheReloadKey);
+        setCache("cache unavailable");
+        waitForTap("CACHE FAILED — press X or tap to run online", go);
+    }, false);
+    ac.addEventListener("obsolete", function () {
+        if (!finishCache()) return;
+        sessionRemove(cacheReloadKey);
+        setCache("cache obsolete — clear browser data", false);
+        setState("CACHE OBSOLETE — clear browser data and reopen the host", "bad");
+    }, false);
+
+    if (!navigator.onLine) {
+        finishCache();
+        setCache("offline — using cached files", true);
+        go();
     } else if (ac.status === ac.UPDATEREADY) {
-        try { ac.swapCache(); } catch (e) {}
-        setCache("update downloaded", true);
-        waitForTap("UPDATE READY -- press X or tap to reload & run",
-                   function () { location.reload(); });
+        reloadWithFreshCache(true);
+    } else if (ac.status === ac.CHECKING || ac.status === ac.DOWNLOADING ||
+               ac.status === ac.UNCACHED) {
+        setCache("waiting for offline cache...");
+        cacheWatchdog = setTimeout(function () {
+            if (!finishCache()) return;
+            setCache("cache check timed out");
+            waitForTap("CACHE TIMEOUT — press X or tap to run online", go);
+        }, 60000);
     } else {
-        waitForDownload();
-    }
-    function waitForDownload() {
-        setCache("checking cache...");
-        ac.addEventListener("downloading",
-            function () { setCache("caching for offline (first run)..."); }, false);
-        ac.addEventListener("progress", function (e) {
-            if (e && e.total)
-                setCache("caching " + Math.round((e.loaded / e.total) * 100) + "%");
-        }, false);
-
-        ac.addEventListener("cached", function () {
-            setCache("cached for offline use", true);
-            waitForTap("CACHED (first run) -- press X or tap to run", go);
-        }, false);
-        ac.addEventListener("updateready", function () {
-            try { ac.swapCache(); } catch (e) {}
-            setCache("update downloaded", true);
-            waitForTap("UPDATE READY -- press X or tap to reload & run",
-                       function () { location.reload(); });
-        }, false);
-
-        ac.addEventListener("noupdate", function () {
-            setCache("cached -- offline ready", true);
+        setCache("cached — checking for updates...");
+        try { ac.update(); } catch (error) {}
+        cacheWatchdog = setTimeout(function () {
+            if (!finishCache()) return;
+            sessionRemove(cacheReloadKey);
+            setCache("cached — offline ready", true);
             go();
-        }, false);
-        ac.addEventListener("error", function () {
-            setCache("cache unavailable");
-            waitForTap("CACHE FAILED -- press X or tap to run anyway", go);
-        }, false);
-        ac.addEventListener("obsolete", function () {
-            setCache("cache obsolete");
-            waitForTap("CACHE OBSOLETE -- press X or tap to run", go);
-        }, false);
+        }, 5000);
     }
-})();
+}());
 </script>
 
 <!-- PSPulse support link: intentionally lightweight for the PS4 browser. -->
