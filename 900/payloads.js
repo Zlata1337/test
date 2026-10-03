@@ -20,6 +20,7 @@ function getPayload(payload, onLoadEndCallback) {
         if (onLoadEndCallback) onLoadEndCallback(req, event);
     };
     req.ontimeout = req.onerror;
+    req.onabort = req.onerror;
     req.send();
 }
 
@@ -34,6 +35,7 @@ function sendPayload(url, data, onLoadEndCallback) {
         if (onLoadEndCallback) onLoadEndCallback(req, event);
     };
     req.ontimeout = req.onerror;
+    req.onabort = req.onerror;
     req.send(data);
 }
 
@@ -93,7 +95,7 @@ function Loadpayloadlocal(PLfile) {
 
         setPayloadStatus('Loading payload file...');
         getPayload(PLfile, function (payloadReq) {
-            if (!xhrSucceeded(payloadReq) || !payloadReq.response) {
+            if (!xhrSucceeded(payloadReq) || !payloadReq.response || payloadReq.response.byteLength === 0 || payloadReq.response.byteLength > 0x200000) {
                 fallbackToExploitLoader(PLfile);
                 return;
             }
@@ -111,6 +113,7 @@ function Loadpayloadlocal(PLfile) {
     };
     statusReq.onerror = function () { fallbackToExploitLoader(PLfile); };
     statusReq.ontimeout = statusReq.onerror;
+    statusReq.onabort = statusReq.onerror;
     statusReq.send();
 }
 

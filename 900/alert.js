@@ -34,6 +34,6 @@ addEventListener('error', function (event) {
 });
 
 // The host page completes firmware detection before deferred modules execute.
-if (window.ps4FirmwareSupported === true) {
+if (window.ps4FirmwareSupported === true && window.ps4CacheReady === true) {
     import('./psfree.js');
 }
